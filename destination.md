@@ -1,7 +1,7 @@
 ## Destination file
 
 ```cli
-$ chicken_battle --chickens 10000000 --trex 100 --simulations 1000
+$ chick_vs_rex --chicken 10000000 --trex 100 --simulations 1000
 ```
 
 #### CHICKENS VS T-REX SIMULATOR
