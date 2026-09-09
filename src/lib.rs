@@ -1,6 +1,8 @@
 use rand::*;
 pub mod fights;
 pub use fights::*;
+// command: 
+// chick_vs_rex --chicken 10000000 --trex 100 --sim 1000
 
 #[derive(Debug)]
 pub struct Chicken {
