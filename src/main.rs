@@ -6,7 +6,7 @@ fn main() {
     // entry point
     let args: Vec<String> = env::args().skip(1).collect();
 
-    let result = match prepare_fight( args ) {
+    let result = match get_fight_results( args ) {
         Ok(res) => res,
         Err(e) => {
             eprintln!("{e}");

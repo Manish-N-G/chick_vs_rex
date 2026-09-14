@@ -49,6 +49,7 @@ impl TRex {
 }
 
 trait Animal:Sized {
+    fn new() -> Self;
     fn size(&self) -> u32;
     fn speed(&self) -> u32;
     fn attack(&self) -> f32;
@@ -58,6 +59,9 @@ trait Animal:Sized {
 }
 
 impl Animal for Chicken {
+    fn new() -> Self {
+        Self::new()
+    }
     fn size(&self) -> u32 {
         self.size
     }
@@ -79,6 +83,9 @@ impl Animal for Chicken {
 }
 
 impl Animal for TRex {
+    fn new() -> Self {
+        Self::new()
+    }
     fn size(&self) -> u32 {
         self.size
     }
@@ -99,3 +106,38 @@ impl Animal for TRex {
     }
 }
 
+#[derive(Debug)]
+struct AnimalGroup<'a, A:Animal> {
+    name: &'static str,
+    list: &'a mut Vec<A>,
+    // list: &'a mut [A],
+    count: usize,
+    health: f32,
+}
+
+impl<'a, A:Animal> AnimalGroup<'a, A> {
+    fn new(list: &'a mut Vec<A>) -> Self {
+        let health = Self::get_avg_health(list);
+        let count = list.len(); 
+        Self {
+            name: A::name(),
+            list,
+            count,
+            health,
+        }
+    }
+    
+    #[inline]
+    fn get_avg_health(list: &mut [A]) -> f32{
+        list.iter().map(|a| a.health()).sum::<f32>().abs()
+    }
+    #[inline]
+    fn empty(&self) -> bool {
+        self.list.is_empty()
+    }
+    #[inline]
+    fn update(&mut self) {
+        self.list.retain(|animal| animal.health() > 0.0);
+    }
+
+}

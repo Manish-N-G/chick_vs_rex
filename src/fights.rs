@@ -9,6 +9,12 @@ fn create_trexes(amount: usize) -> Vec<TRex> {
     (0..amount).map(|_| TRex::new()).collect()
 }
 
+// can use a generic animal typs here also
+fn create_animal<A: Animal>(amount: usize) -> Vec<A> {
+    (0..amount).map(|_| A::new()).collect::<Vec<A>>()
+}
+
+// example for doc comments with tests for a project
 /// Take CLI arguements and parses them.
 ///
 /// Checks if we have chicken and tres values inputed
@@ -18,8 +24,16 @@ fn create_trexes(amount: usize) -> Vec<TRex> {
 ///     "1000".into(), "trex".into(), "10".into()], "trex" );
 /// assert!( args.is_ok() );
 /// ```
+/// Clap is another handly Lib that help with env variavble parcing.
 pub fn parse_args(arr: &[String], tag: &str) -> Result<usize, String> {
     match arr.iter().position(|val| val == tag) {
+        Some(idx) if arr[idx] == "--print" => match arr.get(idx + 1) { 
+            Some(val) => match val.as_str() {
+                "true" => Ok(1),
+                _ => Err("Not correct value: setting to false".into()),
+            },
+            None => Err("Missing print: Defaulted to false".into())
+        },
         Some(idx) => match arr.get(idx + 1) {
             Some(val) => match val.parse() {
                 Ok(0) => Err("Invalid. Cant be 0".into()),
@@ -32,17 +46,20 @@ pub fn parse_args(arr: &[String], tag: &str) -> Result<usize, String> {
     }
 }
 
-pub fn prepare_fight(args: Vec<String>) -> Result<String, String> {
+// gives result type for our lib
+pub fn get_fight_results(args: Vec<String>) -> Result<String, String> {
     let chick_number = parse_args(&args, "--chicken")?;
     let rex_number = parse_args(&args, "--trex")?;
     let sim_number = parse_args(&args, "--sim").unwrap_or(1);
+    let can_print = parse_args(&args, "--print").is_ok();
 
     let chick_list = create_chickens(chick_number);
-    // println!("chick_list: {}", chick_list.len());
     let rex_list = create_trexes(rex_number);
-    // println!("rex_list: {}", rex_list.len());
 
-    Ok(fight(chick_list, rex_list))
+    // can use a generic fn and define the animal type
+    // let animal_list = create_animal::<TRex>(1000000);
+
+    Ok(sim_fight(chick_list, rex_list, can_print))
 }
 
 fn vol_to_sur(vol: u32) -> u32 {
@@ -68,7 +85,6 @@ where
         let mut total_a1 = ani1.1.size();
         let mut total_a2 = ani2.1.size();
 
-        // println!("total1 , total2 {} {}", total_a1, total_a2);
         let val = if total_a1 < total_a2 {
             while total_a1 < total_a2 {
                 let mut next = match peek_a1.peek() {
@@ -78,13 +94,9 @@ where
                 let new_total: u32 = (((total_a1 + next.1.size()) as f32) * 1.03f32) as u32;
                 if new_total < total_a2 {
                     let next = peek_a1.next()?;
-                    // total_a1 = (total_a1 + next.1.size())*2;
-                    total_a1 = (((total_a1 + next.1.size()) as f32) * 1.03f32) as u32;
+                    total_a1 = new_total;
                     idx_end1 = next.0;
-                    // println!("new_total , total2 {} {}", new_total, total_a2);
-                    // println!("total1 , total2 {} {} idx {}", total_a1, total_a2, idx_end1);
                 } else {
-                    // println!("call break else");
                     break;
                 }
             }
@@ -117,8 +129,6 @@ where
     })
     .collect();
 
-    // println!("arr: {:?}", pairs);
-
     pairs.iter().for_each(|ani_pairs| {
         let (animal1, animal2) = (
             &mut pair.0[ani_pairs.0.clone()],
@@ -140,74 +150,87 @@ where
     });
 }
 
-fn fight<A1, A2>(mut animal1: Vec<A1>, mut animal2: Vec<A2>) -> String
+fn sim_fight<A1, A2>(mut animal1: Vec<A1>, mut animal2: Vec<A2>, print: bool) -> String
 where
     A1: Animal + std::fmt::Debug + Sized,
     A2: Animal + std::fmt::Debug + Sized,
 {
     let mut current_time = 0;
+    let mut ani1group = AnimalGroup::new(&mut animal1);
+    let mut ani2group = AnimalGroup::new(&mut animal2);
 
+    while !ani1group.empty() && !ani2group.empty() {
+        current_time += 1;
+
+        // let ani_tuple: (&mut [A1], &mut [A2]) = (&mut animal1, &mut animal2);
+        let ani_tuple: (&mut [A1], &mut [A2]) = (ani1group.list, ani2group.list);
+        group_fight(ani_tuple, current_time);
+
+        // animal1.retain(|animal1| animal1.health() > 0.0);
+        ani1group.update();
+        ani2group.update();
+    }
+    
+    get_print(&animal1, &animal2, print, current_time )
+}
+
+fn get_print<A1, A2>(ani1: &[A1], ani2: &[A2], print: bool, round: u32 ) -> String
+where
+    A1: Animal + std::fmt::Debug + Sized,
+    A2: Animal + std::fmt::Debug + Sized,
+{
     let ani1name = A1::name();
     let ani2name = A2::name();
 
-    let a1_ini = animal1.iter().map(|a| a.health()).sum::<f32>();
-    let a2_ini = animal2.iter().map(|a| a.health()).sum::<f32>();
-
-    let a1_count = animal1.len();
-    let a2_count = animal2.len();
-
-    while !animal2.is_empty() && !animal1.is_empty() {
-        current_time += 1;
-        // println!("fight {}", current_time);
-
-        let ani_tuple: (&mut [A1], &mut [A2]) = (&mut animal1, &mut animal2);
-        group_fight(ani_tuple, current_time);
-        // let ani_tuple:(&mut [A1], &mut [A2]) = (&mut animal1, &mut animal2);
-        // group_fight(groups.clone(), ani_tuple, current_time, AnimalGroup::one);
-
-        animal1.retain(|animal1| animal1.health() > 0.0);
-        // println!("chick list count: {}", animal1.len());
-
-        // let ani_tuple:(&mut [A1], &mut [A2]) = (&mut animal1, &mut animal2);
-        // group_fight(groups, ani_tuple, current_time, AnimalGroup::two);
-        animal2.retain(|animal2| animal2.health() > 0.0);
-        // println!("rex list count: {}", animal1.len());
+    if !print {
+        println!("-----Winner----");
+        if ani1.is_empty() {
+            return format!("\"{}\" win the Fight!",ani2name)
+        } else {
+            return format!("\"{}\" win the Fight!",ani1name)
+        }
     }
+    
+    let a1_ini = ani1.iter().map(|a| a.health()).sum::<f32>();
+    let a2_ini = ani2.iter().map(|a| a.health()).sum::<f32>();
 
-    println!("\nAnimal1: {} --", ani1name);
+    let a1_count = ani1.len();
+    let a2_count = ani2.len();
+
+    println!("\nani1: {} --", ani1name);
     println!(
         "Health for all \"{}\". Start: {}  End: {}",
         ani1name,
         a1_ini,
-        animal1.iter().map(|a| a.health()).sum::<f32>().abs()
+        ani1.iter().map(|a| a.health()).sum::<f32>().abs()
     );
     println!("Number of \"{}\". Start: {}  End: {}\n", 
         ani1name,
         a1_count,
-        animal1.len());
+        ani1.len());
 
-    println!("Animal2: {} --", A2::name());
+    println!("ani2: {} --", A2::name());
     println!(
         "Health for all \"{}\". Start: {}  End: {}",
         ani2name,
         a1_ini,
-        animal2.iter().map(|a| a.health()).sum::<f32>().abs()
+        ani2.iter().map(|a| a.health()).sum::<f32>().abs()
     );
     println!("Number of \"{}\". Start: {}  End: {}\n", 
         ani2name,
         a2_count,
-        animal2.len());
+        ani2.len());
 
     println!("-----Winner----");
-    println!("Number of rounds fought {}", current_time);
-    if animal1.is_empty() {
+    println!("Number of rounds fought {}", round);
+    if ani1.is_empty() {
         format!("\"{}\" win the Fight!",ani2name)
     } else {
         format!("\"{}\" win the Fight!",ani1name)
     }
 }
 
-
+// how to use unit tests
 #[cfg(test)]
 mod tests {
     use super::*;
