@@ -18,7 +18,7 @@ You can access the presentation made for this talk.
 
 We can then run the project with these variables.
 ```text
-cargo run -- --chicken 10000000 --trex 3650
+cargo run -- --chicken 10000000 --trex 3680
 
 // or
 
@@ -28,4 +28,4 @@ chick_vs_rex --chicken 10000000 --trex 100
 
 chick_vs_rex --chicken 10000000 --trex 100 --print true
 ```
-This rougly tell us that we want to simulate a fight between 10 million chickens and 3650 trexes.
+This rougly tell us that we want to simulate a fight between 10 million chickens and 3680 trexes.
