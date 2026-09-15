@@ -3,7 +3,7 @@ use chick_vs_rex::*;
 use std::env;
 
 fn main() {
-    // entry point
+    //entry point
     let args: Vec<String> = env::args().skip(1).collect();
 
     let result = match get_fight_results( args ) {

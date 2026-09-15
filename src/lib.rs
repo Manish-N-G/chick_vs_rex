@@ -136,8 +136,14 @@ impl<'a, A:Animal> AnimalGroup<'a, A> {
         self.list.is_empty()
     }
     #[inline]
-    fn update(&mut self) {
+    fn remove_killed_animal(&mut self) {
         self.list.retain(|animal| animal.health() > 0.0);
+    }
+    #[inline]
+    fn update(&mut self) {
+        self.remove_killed_animal();
+        self.health = Self::get_avg_health(self.list);
+        self.count = self.list.len();
     }
 
 }

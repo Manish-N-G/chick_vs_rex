@@ -1,3 +1,5 @@
+use std::ops::Div;
+
 use super::*; // reference parent module
 
 fn create_chickens(amount: usize) -> Vec<Chicken> {
@@ -62,9 +64,9 @@ pub fn get_fight_results(args: Vec<String>) -> Result<String, String> {
     Ok(sim_fight(chick_list, rex_list, can_print))
 }
 
-fn vol_to_sur(vol: u32) -> u32 {
-    let radius: f32 = ((3.0 * (vol as f32)) / (4.0 * std::f32::consts::PI)).powf(1.0 / 3.0);
-    ((4.0 * std::f32::consts::PI) * radius.powi(2)) as u32
+fn vol_to_sur(vol: u32) -> f32 {
+    // extra for overhead
+    (vol as f32).powf(1.0 / 3.0).powf(2.0) * 1.1
 }
 
 fn group_fight<'a, A1, A2>(pair: (&'a mut [A1], &'a mut [A2]), timer: u32)
@@ -82,49 +84,87 @@ where
         let mut idx_end1 = ani1.0;
         let mut idx_end2 = ani2.0;
 
-        let mut total_a1 = ani1.1.size();
-        let mut total_a2 = ani2.1.size();
+        // let mut total_a1 = ani1.1.size();
+        // let mut total_a2 = ani2.1.size();
+        //
+        // let val = if total_a1 < total_a2 {
+        //     while total_a1 < total_a2 {
+        //         let mut next = match peek_a1.peek() {
+        //             Some(val) => val,
+        //             _ => break,
+        //         };
+        //         let new_total: u32 = (((total_a1 + next.1.size()) as f32) * 1.03f32) as u32;
+        //         if new_total < total_a2 {
+        //             let next = peek_a1.next()?;
+        //             total_a1 = new_total;
+        //             idx_end1 = next.0;
+        //         } else {
+        //             break;
+        //         }
+        //     }
+        //     // (&mut a1[ani1_start..=ani1.0], &mut a2[ani2_start..=ani2.0])
+        //     // println!("1------: ani1 {}, idx_end1 {} ani2 {}, idx_end2 {}", ani1.0, idx_end1, ani2.0, idx_end2);
+        //     ((ani1.0..=idx_end1), (ani2.0..=idx_end2))
+        // } else if total_a2 < total_a1 {
+        //     while total_a2 < total_a1 {
+        //         let mut next = match peek_a2.peek() {
+        //             Some(val) => val,
+        //             _ => break,
+        //         };
+        //         let new_total = total_a2 + next.1.size();
+        //         if new_total < total_a1 {
+        //             let next = peek_a2.next()?;
+        //             total_a2 += next.1.size();
+        //             idx_end2 = next.0;
+        //         } else {
+        //             break;
+        //         }
+        //     }
+        //     // println!("2: ani1 {}, idx_end1 {} ani2 {}, idx_end2 {}", ani1.0, idx_end1, ani2.0, idx_end2);
+        //     ((ani1.0..=idx_end1), (ani2.0..=idx_end2))
+        // } else {
+        //     // println!("3: ani1 {}, idx_end1 {} ani2 {}, idx_end2 {}", ani1.0, idx_end1, ani2.0, idx_end2);
+        //     ((ani1.0..=idx_end1), (ani2.0..=idx_end2))
+        // };
 
-        let val = if total_a1 < total_a2 {
-            while total_a1 < total_a2 {
-                let mut next = match peek_a1.peek() {
-                    Some(val) => val,
-                    _ => break,
-                };
-                let new_total: u32 = (((total_a1 + next.1.size()) as f32) * 1.03f32) as u32;
-                if new_total < total_a2 {
-                    let next = peek_a1.next()?;
-                    total_a1 = new_total;
-                    idx_end1 = next.0;
-                } else {
-                    break;
+        let mut total_a1_sur = vol_to_sur( ani1.1.size() );
+        let mut total_a2_sur = vol_to_sur( ani2.1.size() );
+
+        let val = {
+            if total_a1_sur < total_a2_sur {
+                while total_a1_sur < total_a2_sur {
+                    // let mut next = match peek_a1.peek() {
+                    let mut next = match peek_a1.peek() {
+                        Some(val) => val,
+                        _ => break,
+                    };
+                    let new_total_sur = total_a1_sur + vol_to_sur( next.1.size() );
+                    if new_total_sur < total_a2_sur {
+                        let next = peek_a1.next()?;
+                        total_a1_sur = new_total_sur;
+                        idx_end1 = next.0;
+                    } else {
+                        break;
+                    }
+                }
+            } else if total_a2_sur < total_a1_sur {
+                while total_a2_sur < total_a1_sur {
+                    let mut next = match peek_a2.peek() {
+                        Some(val) => val,
+                        _ => break,
+                    };
+                    let new_total_sur = total_a2_sur + vol_to_sur( next.1.size() );
+                    if new_total_sur < total_a1_sur {
+                        let next = peek_a2.next()?;
+                        total_a2_sur = new_total_sur;
+                        idx_end2 = next.0;
+                    } else {
+                        break;
+                    }
                 }
             }
-            // (&mut a1[ani1_start..=ani1.0], &mut a2[ani2_start..=ani2.0])
-            // println!("1------: ani1 {}, idx_end1 {} ani2 {}, idx_end2 {}", ani1.0, idx_end1, ani2.0, idx_end2);
-            ((ani1.0..=idx_end1), (ani2.0..=idx_end2))
-        } else if total_a2 < total_a1 {
-            while total_a2 < total_a1 {
-                let mut next = match peek_a2.peek() {
-                    Some(val) => val,
-                    _ => break,
-                };
-                let new_total = total_a2 + next.1.size();
-                if new_total < total_a1 {
-                    let next = peek_a2.next()?;
-                    total_a2 += next.1.size();
-                    idx_end2 = next.0;
-                } else {
-                    break;
-                }
-            }
-            // println!("2: ani1 {}, idx_end1 {} ani2 {}, idx_end2 {}", ani1.0, idx_end1, ani2.0, idx_end2);
-            ((ani1.0..=idx_end1), (ani2.0..=idx_end2))
-        } else {
-            // println!("3: ani1 {}, idx_end1 {} ani2 {}, idx_end2 {}", ani1.0, idx_end1, ani2.0, idx_end2);
             ((ani1.0..=idx_end1), (ani2.0..=idx_end2))
         };
-
         Some(val)
     })
     .collect();
@@ -166,67 +206,78 @@ where
         let ani_tuple: (&mut [A1], &mut [A2]) = (ani1group.list, ani2group.list);
         group_fight(ani_tuple, current_time);
 
-        // animal1.retain(|animal1| animal1.health() > 0.0);
-        ani1group.update();
-        ani2group.update();
+        ani1group.remove_killed_animal();
+        ani2group.remove_killed_animal();
     }
     
-    get_print(&animal1, &animal2, print, current_time )
+    get_print(ani1group, ani2group, print, current_time )
 }
 
-fn get_print<A1, A2>(ani1: &[A1], ani2: &[A2], print: bool, round: u32 ) -> String
+fn get_print<A1, A2>(
+    mut ani1g: AnimalGroup<'_, A1>,
+    mut ani2g: AnimalGroup<'_, A2>,
+    print: bool,
+    round: u32 ) -> String
 where
     A1: Animal + std::fmt::Debug + Sized,
     A2: Animal + std::fmt::Debug + Sized,
 {
-    let ani1name = A1::name();
-    let ani2name = A2::name();
+    let ani1g_ini_health = ani1g.health;
+    let ani2g_ini_health = ani2g.health;
+
+    let ani1g_ini_count = ani1g.count;
+    let ani2g_ini_count = ani2g.count;
+
+    ani1g.update();
+    ani2g.update();
 
     if !print {
         println!("-----Winner----");
-        if ani1.is_empty() {
-            return format!("\"{}\" win the Fight!",ani2name)
+        if ani1g.list.is_empty() && ani2g.list.is_empty() {
+            return format!("Draw Fight between {} and {}!", ani1g.name, ani2g.name)
+        } else if ani1g.list.is_empty() {
+            return format!("\"{}\" win the Fight!",ani2g.name)
         } else {
-            return format!("\"{}\" win the Fight!",ani1name)
+            return format!("\"{}\" win the Fight!",ani1g.name)
         }
     }
     
-    let a1_ini = ani1.iter().map(|a| a.health()).sum::<f32>();
-    let a2_ini = ani2.iter().map(|a| a.health()).sum::<f32>();
-
-    let a1_count = ani1.len();
-    let a2_count = ani2.len();
-
-    println!("\nani1: {} --", ani1name);
+    println!("\nani1: {} --", ani1g.name);
     println!(
         "Health for all \"{}\". Start: {}  End: {}",
-        ani1name,
-        a1_ini,
-        ani1.iter().map(|a| a.health()).sum::<f32>().abs()
+        ani1g.name,
+        ani1g_ini_health,
+        ani1g.health
     );
-    println!("Number of \"{}\". Start: {}  End: {}\n", 
-        ani1name,
-        a1_count,
-        ani1.len());
+    println!("Number of \"{}\". Start: {}  End: {}. Percent: {}\n", 
+        ani1g.name,
+        ani1g_ini_count,
+        ani1g.count,
+        (ani1g.count as f32).div(ani1g_ini_count as f32) * 100f32
+    );
 
-    println!("ani2: {} --", A2::name());
+    println!("ani2: {} --", ani2g.name);
     println!(
         "Health for all \"{}\". Start: {}  End: {}",
-        ani2name,
-        a1_ini,
-        ani2.iter().map(|a| a.health()).sum::<f32>().abs()
+        ani2g.name,
+        ani2g_ini_health,
+        ani2g.health
     );
-    println!("Number of \"{}\". Start: {}  End: {}\n", 
-        ani2name,
-        a2_count,
-        ani2.len());
+    println!("Number of \"{}\". Start: {}  End: {}. Percent {}\n", 
+        ani2g.name,
+        ani2g_ini_count,
+        ani2g.count,
+        (ani2g.count as f32).div(ani2g_ini_count as f32) * 100f32
+    );
 
     println!("-----Winner----");
     println!("Number of rounds fought {}", round);
-    if ani1.is_empty() {
-        format!("\"{}\" win the Fight!",ani2name)
+    if ani1g.list.is_empty() && ani2g.list.is_empty() {
+        format!("Draw Fight between {} and {}!", ani1g.name, ani2g.name)
+    } else if ani1g.list.is_empty() {
+        format!("\"{}\" win the Fight!",ani2g.name)
     } else {
-        format!("\"{}\" win the Fight!",ani1name)
+        format!("\"{}\" win the Fight!",ani1g.name)
     }
 }
 
